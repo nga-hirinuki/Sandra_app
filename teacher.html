@@ -1511,7 +1511,7 @@
             document.getElementById('student-room').value = record.room || '';
             document.getElementById('review-notes').value = record.comments || '';
             currentImageData = record.imageData || { writing: '', reading: '' };
-            
+
             // Restore selections from both modes
             if (record.selections && typeof record.selections === 'object') {
                 // Handle both old format (flat) and new format (writing/reading split)
