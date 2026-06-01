@@ -67,6 +67,15 @@
             -webkit-text-fill-color: transparent;
         }
 
+        .teacher-welcome {
+            color: var(--text-main);
+            font-size: 1.5rem;
+            font-weight: 500;
+            line-height: 1.4;
+            white-space: nowrap;
+            min-width: 220px;
+        }
+
         .meta-inputs {
             display: flex;
             gap: 12px;
@@ -96,6 +105,18 @@
             border-radius: 6px;
             font-size: 0.9rem;
             outline: none;
+        }
+
+        .meta-value {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 12px;
+            border-radius: 6px;
+            min-width: 160px;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
         }
 
         .meta-group input:focus {
@@ -690,25 +711,17 @@
     <!-- Header Block -->
     <div class="header-container">
         <h1>School-Wide <span>Literacy Moderation Hub</span></h1>
+        <div id="teacher-welcome" class="teacher-welcome"></div>
         <div class="meta-inputs">
-            <div class="meta-group">
-                <label>Teacher/Moderator</label>
-                <div class="teacher-input-wrapper">
-                    <input type="text" id="teacher-name" placeholder="Name/Inits..." autocomplete="off">
-                    <div class="teacher-suggestions hidden" id="teacher-suggestions"></div>
-                </div>
-            </div>
             <div class="meta-group">
                 <label>Student</label>
                 <input type="text" id="student-name" placeholder="Name...">
             </div>
-            <div class="meta-group">
-                <label>Class/Room</label>
-                <input type="text" id="student-room" style="width: 90px;" placeholder="Room...">
-            </div>
             <div class="meta-group" style="margin-bottom: 6px; display: flex; gap: 8px;">
-                <button class="toggle-panel-btn" onclick="toggleStudentPanel()">Toggle Student Panel</button>
+                <button class="toggle-panel-btn" onclick="toggleStudentPanel()">Students</button>
             </div>
+            <input type="hidden" id="teacher-name" autocomplete="off">
+            <input type="hidden" id="student-room">
         </div>
     </div>
 
@@ -1057,6 +1070,7 @@
         let activeMode = 'writing';
         let currentTeacherName = '';
         let currentStudentId = null;
+        let showTeacherWelcome = true;
         // store image per domain so writing and reading can have separate images
         let currentImageData = { writing: '', reading: '' };
         let studentSort = { field: 'name', order: 'asc' };
@@ -1180,6 +1194,7 @@
         }
 
         function evalPill(itemId, level) {
+            removeTeacherWelcome();
             const block = document.getElementById(`right-sec-${itemId}`);
             block.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
 
@@ -1223,6 +1238,49 @@
             currentTeacherName = name.trim();
             document.getElementById('panel-teacher-name').innerText = currentTeacherName;
             renderStudentPanel();
+            renderTeacherWelcome();
+        }
+
+        function renderTeacherWelcome() {
+            const welcomeEl = document.getElementById('teacher-welcome');
+            const teacher = currentTeacherName;
+            const classNumber = document.getElementById('student-room')?.value.trim();
+            if (!teacher && !classNumber) {
+                welcomeEl.textContent = '';
+                return;
+            }
+
+            let text = '';
+            if (showTeacherWelcome && teacher) {
+                text = `Welcome, ${teacher}`;
+            } else if (teacher) {
+                text = teacher;
+            }
+            if (classNumber) {
+                text += text ? ` — Room ${classNumber}` : `Room ${classNumber}`;
+            }
+            welcomeEl.textContent = text;
+        }
+
+        function removeTeacherWelcome() {
+            if (!showTeacherWelcome) return;
+            showTeacherWelcome = false;
+            renderTeacherWelcome();
+        }
+
+        function applyLoginParams() {
+            const params = new URLSearchParams(window.location.search);
+            const teacher = params.get('teacher');
+            const classNumber = params.get('class');
+
+            if (teacher) {
+                document.getElementById('teacher-name').value = teacher;
+                setCurrentTeacher(teacher);
+            }
+            if (classNumber) {
+                document.getElementById('student-room').value = classNumber;
+            }
+            renderTeacherWelcome();
         }
 
         function getCurrentTeacherData() {
@@ -1428,6 +1486,7 @@
             saveTeacherData(currentTeacherName, teacherData);
             currentStudentId = studentRecord.id;
             renderStudentPanel();
+            removeTeacherWelcome();
             alert(`Saved latest changes for ${studentName} under ${currentTeacherName}.`);
             resetForm();
         }
@@ -1551,6 +1610,7 @@
         });
 
         // Run Setup Frame Mount Injections
+        applyLoginParams();
         refreshWorkspace();
         renderStudentPanel();
     </script>
