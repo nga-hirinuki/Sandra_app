@@ -831,7 +831,6 @@
 
         <div class="actions-row">
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn btn-secondary" onclick="resetForm()">Clear Active Screen</button>
                 <button class="btn btn-primary" onclick="finishSession()">Finish Session</button>
             </div>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -1390,10 +1389,12 @@
                 const card = document.createElement('div');
                 card.className = 'student-card';
                 card.innerHTML = `
-                    <h3>${student.studentName}</h3>
-                    <p>Year: ${student.year}</p>
-                    <p>${student.mode === 'writing' ? 'Writing Domain' : 'Reading Domain'}</p>
-                    <div class="student-card-actions">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                        <h3 style="margin: 0;">${student.studentName}</h3>
+                        <p style="margin: 0; color: var(--text-muted); font-size: 0.84rem;">Year: ${student.year}</p>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <p style="margin: 0;">${student.mode === 'writing' ? 'Writing Domain' : 'Reading Domain'}</p>
                         <button class="student-delete-btn" data-student-id="${student.id}">Delete</button>
                     </div>
                 `;
@@ -1480,6 +1481,11 @@
             if (existingIndex >= 0) {
                 teacherData.students[existingIndex] = studentRecord;
             } else {
+                // Check 40-student limit for new students
+                if (teacherData.students.length >= 40) {
+                    alert('This classroom has reached the 40-student limit. Please delete a student before adding a new one.');
+                    return;
+                }
                 teacherData.students.push(studentRecord);
             }
 
@@ -1541,6 +1547,7 @@
             document.getElementById('panel-teacher-name').innerText = 'None selected';
             resetForm(true);
             renderStudentPanel();
+            window.location.href = 'login.html';
         }
 
         function resetForm(clearTeacher = false) {
