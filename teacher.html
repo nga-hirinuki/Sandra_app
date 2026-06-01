@@ -1073,6 +1073,10 @@
         // store image per domain so writing and reading can have separate images
         let currentImageData = { writing: '', reading: '' };
         let studentSort = { field: 'name', order: 'asc' };
+        // Persistent selection tracking for both modes
+        let currentSelections = { writing: {}, reading: {} };
+        // Persistent selection tracking for both modes
+        let currentSelections = { writing: {}, reading: {} };
 
         const TEACHER_INDEX_KEY = 'teacher_index';
         const TEACHER_DATA_PREFIX = 'teacher_data_';
@@ -1137,6 +1141,10 @@
             document.querySelectorAll('#mode-toggles .toggle-btn').forEach(b => b.classList.remove('active-mode'));
             document.querySelector(`#mode-toggles .toggle-btn[data-mode="${md}"]`).classList.add('active-mode');
             refreshWorkspace();
+            // Restore selections for this mode after refresh
+            setTimeout(() => {
+                restoreSelectionsForMode(md);
+            }, 50);
             // update preview to reflect the image for the selected mode
             const modeImage = currentImageData ? (currentImageData[md] || '') : '';
             if (modeImage) {
@@ -1199,6 +1207,9 @@
 
             const selected = block.querySelector(`.pill[data-level="${level}"]`);
             selected.classList.add('active');
+
+            // Save to persistent selections object
+            currentSelections[activeMode][itemId] = level;
 
             // Dynamic evaluation text substitution
             const yearLabel = schoolMatrix[activeLevel].label;
@@ -1455,14 +1466,6 @@
 
             const room = document.getElementById('student-room').value.trim();
             const comments = document.getElementById('review-notes').value;
-            const selections = {};
-            document.querySelectorAll('.descriptor-section').forEach(section => {
-                const itemId = section.querySelector('.pill')?.getAttribute('data-id');
-                const activePill = section.querySelector('.pill.active');
-                if (itemId && activePill) {
-                    selections[itemId] = activePill.getAttribute('data-level');
-                }
-            });
 
             const teacherData = getCurrentTeacherData();
             const studentRecord = {
@@ -1472,7 +1475,7 @@
                 year: activeLevel,
                 mode: activeMode,
                 comments,
-                selections,
+                selections: { ...currentSelections },
                 imageData: currentImageData || { writing: '', reading: '' },
                 savedAt: new Date().toISOString()
             };
@@ -1508,6 +1511,20 @@
             document.getElementById('student-room').value = record.room || '';
             document.getElementById('review-notes').value = record.comments || '';
             currentImageData = record.imageData || { writing: '', reading: '' };
+            
+            // Restore selections from both modes
+            if (record.selections && typeof record.selections === 'object') {
+                // Handle both old format (flat) and new format (writing/reading split)
+                if (record.selections.writing || record.selections.reading) {
+                    currentSelections = { ...record.selections };
+                } else {
+                    // Old format - convert to new format
+                    currentSelections = { writing: {}, reading: {} };
+                    currentSelections[record.mode] = record.selections;
+                }
+            } else {
+                currentSelections = { writing: {}, reading: {} };
+            }
 
             if (record.mode && record.mode !== activeMode) {
                 selectModeTab(record.mode);
@@ -1518,24 +1535,33 @@
 
             refreshWorkspace();
             setTimeout(() => {
-                document.querySelectorAll('.descriptor-section').forEach(section => {
-                    const itemId = section.querySelector('.pill')?.getAttribute('data-id');
-                    if (!itemId) return;
-                    section.querySelectorAll('.pill').forEach(pill => pill.classList.remove('active'));
-                    const level = record.selections[itemId];
-                    if (level) {
-                        const pill = section.querySelector(`.pill[data-level="${level}"]`);
-                        if (pill) pill.classList.add('active');
-                    }
-                });
+                restoreSelectionsForMode(activeMode);
+                const modeImage = currentImageData ? (currentImageData[activeMode] || '') : '';
+                if (modeImage) {
+                    previewArea.innerHTML = `<img src="${modeImage}" alt="Student Evidence">`;
+                } else {
+                    previewArea.innerHTML = `<div class="preview-placeholder">No file loaded. Drop images or screenshots of student books to review them alongside the progress scale during active moderation.</div>`;
+                }
             }, 100);
+        }
 
-            const modeImage = currentImageData ? (currentImageData[activeMode] || '') : '';
-            if (modeImage) {
-                previewArea.innerHTML = `<img src="${modeImage}" alt="Student Evidence">`;
-            } else {
-                previewArea.innerHTML = `<div class="preview-placeholder">No file loaded. Drop images or screenshots of student books to review them alongside the progress scale during active moderation.</div>`;
-            }
+        function restoreSelectionsForMode(mode) {
+            const modeSelections = currentSelections[mode] || {};
+            document.querySelectorAll('.descriptor-section').forEach(section => {
+                const itemId = section.querySelector('.pill')?.getAttribute('data-id');
+                if (!itemId) return;
+                section.querySelectorAll('.pill').forEach(pill => pill.classList.remove('active'));
+                const level = modeSelections[itemId];
+                if (level) {
+                    const pill = section.querySelector(`.pill[data-level="${level}"]`);
+                    if (pill) {
+                        pill.classList.add('active');
+                        const yearLabel = schoolMatrix[activeLevel].label;
+                        const updatedHintText = level === 'P' ? `Fully meeting ${yearLabel} expectations` : progressHints[level];
+                        document.getElementById(`hint-${itemId}`).innerText = updatedHintText;
+                    }
+                }
+            });
         }
 
         function finishSession() {
