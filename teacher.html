@@ -722,6 +722,7 @@
             </div>
             <input type="hidden" id="teacher-name" autocomplete="off">
             <input type="hidden" id="student-room">
+            <div id="teacher-suggestions" class="teacher-suggestions hidden"></div>
         </div>
     </div>
 
@@ -1073,8 +1074,6 @@
         // store image per domain so writing and reading can have separate images
         let currentImageData = { writing: '', reading: '' };
         let studentSort = { field: 'name', order: 'asc' };
-        // Persistent selection tracking for both modes
-        let currentSelections = { writing: {}, reading: {} };
         // Persistent selection tracking for both modes
         let currentSelections = { writing: {}, reading: {} };
 
